@@ -1,0 +1,81 @@
+bl_info = {
+    "name": "Random Building Generator",
+    "author": "Suresh Choudhary",
+    "version": (1, 0),
+    "blender": (3, 4, 0),
+    "location": "View3D > Add > Mesh",
+    "description": "Generates a random building",
+    "category": "Add Mesh"
+}
+
+import bpy
+import random
+
+class RandomBuildingGenerator(bpy.types.Operator):
+    """Operator which generates a random building"""
+    bl_idname = "object.generate_random_building"
+    bl_label = "Generate Random Building"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        # Set building parameters
+        building_width = random.uniform(4, 10)
+        building_depth = random.uniform(4, 10)
+        num_floors = random.randint(1, 10)
+
+        # Create the building mesh
+        building_verts = [(0, 0, 0), (0, building_depth, 0), (building_width, building_depth, 0), (building_width, 0, 0),
+                          (0, 0, num_floors), (0, building_depth, num_floors), (building_width, building_depth, num_floors),
+                          (building_width, 0, num_floors)]
+        building_faces = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 4, 7, 3), (1, 5, 4, 0), (2, 6, 5, 1), (3, 7, 6, 2)]
+        building_mesh = bpy.data.meshes.new("BuildingMesh")
+        building_object = bpy.data.objects.new("BuildingObject", building_mesh)
+        bpy.context.scene.collection.objects.link(building_object)
+        building_mesh.from_pydata(building_verts, [], building_faces)
+        building_mesh.update()
+
+        # Add the roof texture to the building
+        roof_verts = [(0, 0, num_floors), (0, building_depth, num_floors), (building_width, building_depth, num_floors),
+                      (building_width, 0, num_floors)]
+        roof_faces = [(0, 1, 2, 3)]
+        roof_uvs = [(0, 0), (0, 1), (1, 1), (1, 0)]
+        roof_mesh = bpy.data.meshes.new("RoofMesh")
+        roof_object = bpy.data.objects.new("RoofObject", roof_mesh)
+        bpy.context.scene.collection.objects.link(roof_object)
+        roof_mesh.from_pydata(roof_verts, [], roof_faces)
+        roof_mesh.uv_layers.new()
+        uv_layer = roof_mesh.uv_layers[-1]
+        for face in roof_mesh.polygons:
+            for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+                uv_layer.data[loop_idx].uv = roof_uvs[vert_idx]
+
+        return {'FINISHED'}
+
+classes = [RandomBuildingGenerator]
+
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+
+    # Define the text block contents
+    script_contents = '''
+    bpy.ops.object.generate_random_building()
+    '''
+
+    # Create a new text block and set its contents
+    random_building_generator = bpy.data.texts.new('random_building_generator.py')
+    random_building_generator.write(script_contents)
+
+    # Set the new text block as the active script and run it
+    random_building_generator.use_script()
+    bpy.ops.text.run_script()
+
+def unregister():
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+
+    # Remove the text block
+    bpy.data.texts.remove('random_building_generator')
+
+if '__name__' == "__name__":
+    register()
